@@ -18,10 +18,8 @@ php5-gd \
 php5-intl \
 php5-xsl \
 git \
-curl
-
-# Enable Apache rewrite module
-RUN a2enmod rewrite
+curl \
+mysql-client-5.6
 
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
@@ -33,14 +31,42 @@ ENV APACHE_PID_FILE /var/run/apache2.pid
 ADD config/magento2.conf /etc/apache2/sites-available/magento2.conf
 RUN rm -f /etc/apache2/sites-enabled/000-default.conf
 RUN rm -f /etc/apache2/sites-available/000-default.conf
-#this makes sure apache listens on ipv4
+
+# Enable Apache rewrite module
+RUN a2enmod rewrite
+RUN a2ensite magento2
+
+# fix the configs here
 RUN sed -i 's/80/0.0.0.0:80/g' /etc/apache2/ports.conf
+RUN sed -ir 's/^;always_populate_raw_post_data.*$/always_populate_raw_post_data = -1/g' /etc/php5/apache2/php.ini
+RUN sed -ir 's/^;always_populate_raw_post_data.*$/always_populate_raw_post_data = -1/g' /etc/php5/cli/php.ini
+RUN sed -ir 's/^;date.timezone.*$/date.timezone = America\/LosAngeles/g' /etc/php5/apache2/php.ini
+RUN sed -ir 's/^;date.timezone.*$/date.timezone = America\/LosAngeles/g' /etc/php5/cli/php.ini
 
 # install magento2
-RUN mkdir -p /var/www/magento2/htdocs
-RUN cd /var/www/magento2/htdocs
-RUN curl -sS https://getcomposer.org/installer | php
-#RUN php composer.phar install
+ENV MAGE_ROOT /var/www/magento2/htdocs
+RUN useradd -md /home/mage -s /usr/sbin/nologin mage
+RUN mkdir -p $MAGE_ROOT
+RUN chown mage:mage $MAGE_ROOT
+
+#install composer
+RUN curl -sS https://getcomposer.org/installer | php && \
+mv composer.phar /usr/local/bin/composer
+
+##RUN sudo -u mage cd /var/www/magento2/htdocs && \
+RUN sudo -u mage git clone -b 2.0 https://github.com/magento/magento2.git $MAGE_ROOT
+RUN find $MAGE_ROOT -type d -exec chmod 740 {} \;
+RUN find $MAGE_ROOT -type f -exec chmod 640 {} \;
+RUN chmod 700 $MAGE_ROOT/bin/magento
+RUN sudo -u mage composer install --no-dev -d $MAGE_ROOT
+
+ENV APACHE_RUN_USER mage
+ENV APACHE_RUN_GROUP mage
 
 EXPOSE 80
-CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+
+# Start up the Apache server
+ADD scripts/runserver.sh /usr/local/bin/runserver.sh
+RUN chmod +x /usr/local/bin/runserver.sh
+ENTRYPOINT ["bash", "-c"]
+CMD ["/usr/local/bin/runserver.sh"]
