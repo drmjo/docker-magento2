@@ -1,0 +1,1 @@
+docker run --name name -d -p 0.0.0.0:8000:80 --link mysql:mysql -e MYSQL_USER=user -e MYSQL_PASSWORD=pass -e MYSQL_HOST=mysql -e PUBLIC_HOST=host:8000 repo:tag

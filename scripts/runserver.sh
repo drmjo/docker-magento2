@@ -22,6 +22,7 @@ sudo -u mage bin/magento setup:install \
   --admin-email=demo@example.com \
   --admin-user=admin \
   --admin-password=abcd1234 \
+  --base-url=http://$PUBLIC_HOST/ \
   --db-host="$MYSQL_HOST" \
   --db-name=magento \
   --db-user="$MYSQL_USER" \

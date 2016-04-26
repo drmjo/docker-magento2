@@ -21,8 +21,8 @@ git \
 curl \
 mysql-client-5.6
 
-ENV APACHE_RUN_USER www-data
-ENV APACHE_RUN_GROUP www-data
+ENV APACHE_RUN_USER mage
+ENV APACHE_RUN_GROUP mage
 ENV APACHE_LOG_DIR /var/log/apache2
 ENV APACHE_LOCK_DIR /var/lock/apache2
 ENV APACHE_PID_FILE /var/run/apache2.pid
@@ -54,14 +54,19 @@ RUN curl -sS https://getcomposer.org/installer | php && \
 mv composer.phar /usr/local/bin/composer
 
 ##RUN sudo -u mage cd /var/www/magento2/htdocs && \
-RUN sudo -u mage git clone -b 2.0 https://github.com/magento/magento2.git $MAGE_ROOT
+RUN sudo -u mage composer create-project \
+magento/community-edition $MAGE_ROOT 2.0.4 \
+-s stable \
+--prefer-source \
+--no-interaction \
+--no-install
+
 RUN find $MAGE_ROOT -type d -exec chmod 740 {} \;
 RUN find $MAGE_ROOT -type f -exec chmod 640 {} \;
 RUN chmod 700 $MAGE_ROOT/bin/magento
-RUN sudo -u mage composer install --no-dev -d $MAGE_ROOT
 
-ENV APACHE_RUN_USER mage
-ENV APACHE_RUN_GROUP mage
+ADD auth.json $MAGE_ROOT/auth.json
+RUN sudo -u mage composer install --no-dev -d $MAGE_ROOT
 
 EXPOSE 80
 
